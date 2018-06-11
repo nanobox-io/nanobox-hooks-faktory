@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+cat <<-END
+{
+  "redundant": false,
+  "horizontal": false,
+  "user": "nanobox",
+  "users": [{
+    "username": "nanobox",
+    "meta": {}
+  }],
+  "ips": ["default"],
+  "port": 7419,
+  "behaviors": ["migratable"]
+}
+END
+
+exit 0
