@@ -1,1 +1,90 @@
 #!/bin/bash
+
+mkdir -p /etc/service/db/log
+cat > /etc/service/db/log/run <<-EOF
+#!/bin/sh -e
+
+[ -d /var/log/gonano/db ] || mkdir -p /var/log/gonano/db
+cd /var/log/gonano/db
+exec svlogd -v -ttt /var/log/gonano/db
+
+EOF
+chmod 755 /etc/service/db/log/run
+
+cat > /etc/service/db/run <<-EOF
+#!/bin/bash -e
+
+# redirect stderr to stdout
+exec 2>&1
+
+# set HOME
+export HOME=/root
+
+# clear PATH so we can explicitly build it
+PATH=""
+
+# source any environment variables that were dropped by engines
+# including, perhaps, a custom PATH
+if [ -d /etc/env.d ]; then
+        for env in \$(/bin/ls /etc/env.d); do
+                export "\$env=\$(/bin/cat /etc/env.d/\$env)"
+        done
+fi
+
+# if the engine manipulated the PATH, let's append to it instead of reset
+if [ -n \$PATH ]; then
+        MYPATH=\${PATH}:
+fi
+
+# if the boxfile has set extra_paths, then let's make sure
+# those are added to the PATH as well
+if [[ -n \$EXTRA_PATHS ]]; then
+  MYPATH=\${MYPATH}\${EXTRA_PATHS}:
+fi
+
+# set the defaults
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# prefix with custom path
+export PATH=\${MYPATH}\${PATH}
+
+exec /usr/local/bin/faktory -b 0.0.0.0:7419 -e production
+
+EOF
+chmod 755 /etc/service/db/run
+
+sv start db
+
+cat > /etc/nanoinit.d/eth00 <<-EOF
+#!/bin/bash
+case \$1 in
+  start)
+    if [[ ! \$(ifconfig) =~ eth0:0 ]]; then
+      ifconfig eth0:0 #{payload[:ips][:default]}
+      arping -A -c 10 -I eth0 #{payload[:ips][:default]}
+    fi
+    ;;
+  stop)
+    if [[ \$(ifconfig) =~ eth0:0 ]]; then
+      ifconfig eth0:0 down
+    fi
+    ;;
+  *)
+    echo "\$0 start|stop"
+    exit 1
+    ;;
+esac
+EOF
+chmod 755 /etc/nanoinit.d/eth00
+
+/etc/nanoinit.d/eth00 start
+
+if [[ -d /opt/nanobox/cron ]]; then
+  mkdir -p /etc/service/cron
+  cat >> /etc/service/cron/run <<-EOF
+  #!/bin/sh
+  exec 2>&1
+  exec cron -f -l
+  EOF
+  sv start cron
+fi

@@ -1,1 +1,90 @@
 #!/bin/bash
+
+# 1) set up ssh keys
+# 2) set up environment variables
+# 3) set up extra paths
+# 4) install extra packages
+# 5) run extra steps
+# 6) configure cron jobs
+
+platform=$(echo $1 | jq -r .platform)
+if [[ ! "$platform" = 'local' ]]; then
+  # set up ssh keys
+  mkdir -p /root/.ssh
+  chmod 700 /root/.ssh
+  echo $(echo $1 | jq -e -r '.ssh.admin_key.private_key') > /root/.ssh/id_rsa
+  chmod 600 /root/.ssh/id_rsa
+  echo $(echo $1 | jq -e -r '.ssh.admin_key.public_key') > /root/.ssh/id_rsa.pub
+  echo $(echo $1 | jq -e -r '.ssh.admin_key.public_key') > /root/.ssh/authorized_keys
+  # set up host ssh keys
+  if [[ ! -f /etc/ssh/ssh_host_rsa_key ]]; then
+    ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
+  fi
+  if [[ ! -f /etc/ssh/ssh_host_dsa_key ]]; then
+    ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
+  fi
+  if [[ ! -f /etc/ssh/ssh_host_ecdsa_key ]]; then
+    ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa
+  fi
+  if [[ ! -f /etc/ssh/ssh_host_ed25519_key ]]; then
+    ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N '' -t ed25519
+  fi
+fi
+
+mkdir -p /etc/env.d
+env_length=$(echo $1 | jq -e -r '.env | keys' | jq length)
+for i in $(seq 1 $((env_length - 1))); do
+  key=$(echo $1 | jq -e -r '.env | keys' | jq -r ".[$i]")
+  value=$(echo $1 | jq -e -r ".env[\"$key\"]")
+  echo "$value" > /etc/env.d/$key
+  eval export $key=$value
+done
+echo $(echo $1 | jq -e -r ".users[0].password") > /etc/env.d/FAKTORY_PASSWORD
+
+extra_path_dirs_length=$(echo $1 | jq -e -r '.extra_path_dirs | length')
+if [[ $extra_path_dirs_length -gt 0 ]]; then
+  extra_path_dirs=""
+  for i in $(seq 0 $((extra_path_dirs_length - 1))); do
+    if [[ -z $extra_path_dirs ]]; then
+      extra_path_dirs=$(echo $1 | jq -e -r ".extra_path_dirs[$i]")
+    else
+      extra_path_dirs=${extra_path_dirs}:$(echo $1 | jq -e -r ".extra_path_dirs[$i]")
+    fi
+  done
+  echo $extra_path_dirs > /etc/env.d/EXTRA_PATHS
+fi
+
+extra_packages_length=$(echo $1 | jq -e -r '.extra_packages | length')
+if [[ $extra_packages_length -gt 0 ]]; then
+  packages=()
+  for i in $(seq 0 $((extra_packages_length - 1))); do
+    packages+=$(echo $1 | jq -e -r ".extra_packages[$i]")
+  done
+  apk add --no-cache --virtual .persistent-deps $packages
+fi
+
+extra_steps_length=$(echo $1 | jq -e -r '.extra_steps | length')
+if [[ $extra_steps_length -gt 0 ]]; then
+  for i in $(seq 0 $((extra_steps_length - 1))); do
+    command+=$(echo $1 | jq -e -r ".extra_steps[$i]")
+    eval $command
+  done
+fi
+
+member_uid=$(echo $1 | jq -e -r '.member.uid')
+if [[ $member_uid -eq 1 ]]; then
+  cron_jobs_length=$(echo $1 | jq -e -r '.cron_jobs | length')
+  if [[ $cron_jobs_length -gt 0 ]]; then
+    mkdir -p /opt/nanobox/cron
+    echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" > /etc/crontab
+    for i in $(seq 0 $((cron_jobs_length - 1))); do
+      id=$(echo $1 | jq -e -r ".cron_jobs[$i]" | jq ".id")
+      schedule=$(echo $1 | jq -e -r ".cron_jobs[$i]" | jq ".schedule")
+      command+=$(echo $1 | jq -e -r ".cron_jobs[$i]" | jq ".command")
+      echo "#!/bin/bash" > /opt/nanobox/cron/${id}
+      echo "$command" >> /opt/nanobox/cron/${id}
+      chmod 755 /opt/nanobox/cron/${id}
+      echo "${schedule} root /opt/nanobox/cron/${id}" >> /etc/crontab
+    done
+  fi
+fi

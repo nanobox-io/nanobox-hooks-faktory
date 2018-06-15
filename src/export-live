@@ -1,0 +1,3 @@
+#!/bin/bash
+ip=$(echo $1 | jq '.member.local_ip')
+tar -cf - /var/lib/faktory | ssh ${ip} tar -C / -xpf -

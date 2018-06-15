@@ -1,1 +1,20 @@
 #!/bin/bash
+
+if [[ -f /etc/nanoinit.d/eth00 ]]; then
+  /etc/nanoinit.d/eth00 stop
+  rm -rf /etc/nanoinit.d/eth00
+fi
+
+if [[ -d /etc/service/db ]]; then
+  if [[ $(sv status db) =~ ^run ]]; then
+    sv stop db
+  fi
+  rm  -rf /etc/service/db
+fi
+
+if [[ -d /etc/service/cron ]]; then
+  if [[ $(sv status cron) =~ ^run ]]; then
+    sv stop cron
+  fi
+  rm  -rf /etc/service/cron
+fi

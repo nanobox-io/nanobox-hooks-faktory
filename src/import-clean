@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [[ -d /etc/service/ssh ]]; then
+  if [[ $(sv status ssh) =~ ^run ]]; then
+    sv stop ssh
+  fi
+  rm  -rf /etc/service/ssh
+fi

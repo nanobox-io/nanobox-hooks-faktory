@@ -1,0 +1,3 @@
+#!/bin/bash
+ip=$(echo $1 | jq '.member.local_ip')
+rsync --delete -e 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' -a /var/lib/faktory/. ${ip}:/var/lib/faktory/

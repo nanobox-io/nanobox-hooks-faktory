@@ -1,0 +1,63 @@
+#!/bin/bash
+
+if [[ -d /etc/service/db ]]; then
+  if [[ $(sv status db) =~ ^run ]]; then
+    sv stop db
+  fi
+  rm  -rf /etc/service/db
+fi
+
+mkdir -p /etc/service/ssh/log
+cat > /etc/service/ssh/log/run <<-EOF
+#!/bin/sh -e
+
+[ -d /var/log/gonano/ssh ] || mkdir -p /var/log/gonano/ssh
+cd /var/log/gonano/ssh
+exec svlogd -v -ttt /var/log/gonano/ssh
+
+EOF
+chmod 755 /etc/service/ssh/log/run
+
+cat > /etc/service/ssh/run <<-EOF
+#!/bin/bash -e
+
+# redirect stderr to stdout
+exec 2>&1
+
+# set HOME
+export HOME=/root
+
+# clear PATH so we can explicitly build it
+PATH=""
+
+# source any environment variables that were dropped by engines
+# including, perhaps, a custom PATH
+if [ -d /etc/env.d ]; then
+        for env in \$(/bin/ls /etc/env.d); do
+                export "\$env=\$(/bin/cat /etc/env.d/\$env)"
+        done
+fi
+
+# if the engine manipulated the PATH, let's append to it instead of reset
+if [ -n \$PATH ]; then
+        MYPATH=\${PATH}:
+fi
+
+# if the boxfile has set extra_paths, then let's make sure
+# those are added to the PATH as well
+if [[ -n \$EXTRA_PATHS ]]; then
+  MYPATH=\${MYPATH}\${EXTRA_PATHS}:
+fi
+
+# set the defaults
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# prefix with custom path
+export PATH=\${MYPATH}\${PATH}
+
+exec /opt/gonano/sbin/sshd -D -e
+
+EOF
+chmod 755 /etc/service/ssh/run
+
+sv start ssh
