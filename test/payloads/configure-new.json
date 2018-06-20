@@ -38,7 +38,7 @@
     "touch /tmp/extra_step"
   ],
   "extra_packages": [
-    "geoip"
+    "GeoIP"
   ],
   "ssh": {
     "admin_key": {
