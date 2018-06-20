@@ -10,7 +10,6 @@ wait_for_running() {
   done
 }
 
-
 wait_for_listening() {
   container=$1
   ip=$2
@@ -43,7 +42,7 @@ insert_test_data() {
   key=$4
   data=$5
   # run docker exec ${container} bash -c "some command"
-  [ "$status" -eq 0 ]
+  # [ "$status" -eq 0 ]
 }
 
 update_test_data() {
@@ -53,7 +52,7 @@ update_test_data() {
   key=$4
   data=$5
   # run docker exec ${container} bash -c "some command"
-  [ "$status" -eq 0 ]
+  # [ "$status" -eq 0 ]
 }
 
 verify_test_data() {
@@ -63,9 +62,9 @@ verify_test_data() {
   key=$4
   data=$5
   # run docker exec ${container} bash -c "some command"
-  echo_lines
-  [ "${lines[0]}" = "${data}" ]
-  [ "$status" -eq 0 ]
+  # echo_lines
+  # [ "${lines[0]}" = "${data}" ]
+  # [ "$status" -eq 0 ]
 }
 
 verify_plan() {
