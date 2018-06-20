@@ -1,20 +1,44 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-if [[ -f /etc/nanoinit.d/eth00 ]]; then
-  /etc/nanoinit.d/eth00 stop
-  rm -rf /etc/nanoinit.d/eth00
-fi
+# hookit is installed as a bundled app, so we need bundler to load it for us
+$:.unshift  '/opt/gonano/hookit/vendor/bundle'
+require 'bundler/setup'
 
-if [[ -d /etc/service/db ]]; then
-  if [[ $(sv status db) =~ ^run ]]; then
-    sv stop db
-  fi
-  rm  -rf /etc/service/db
-fi
+# load hookit/setup to bootstrap hookit and import the dsl
+require 'hookit/setup'
 
-if [[ -d /etc/service/cron ]]; then
-  if [[ $(sv status cron) =~ ^run ]]; then
-    sv stop cron
-  fi
-  rm  -rf /etc/service/cron
-fi
+# Remove the IP if provided
+if payload[:ips]
+
+  execute "bring down vip" do
+    command "/etc/nanoinit.d/eth00 stop"
+    not_if { !File.exist?('/etc/nanoinit.d/eth00') }
+  end
+
+  execute "remove persistance" do
+    command "rm -f /etc/nanoinit.d/eth00"
+    not_if { !File.exist?('/etc/nanoinit.d/eth00') }
+  end
+end
+
+service "faktory" do
+  action :disable
+  init :runit
+  only_if {`sv status faktory` =~ /^run/}
+  not_if { !Dir.exist?('/etc/service/faktory') }
+end
+
+directory '/etc/service/faktory' do
+  action :delete
+  not_if { !Dir.exist?('/etc/service/faktory') }
+end
+
+service 'cron' do
+  action :disable
+  not_if { !Dir.exist?('/etc/service/cron') }
+end
+
+directory '/etc/service/cron' do
+  action :delete
+  not_if { !Dir.exist?('/etc/service/cron') }
+end

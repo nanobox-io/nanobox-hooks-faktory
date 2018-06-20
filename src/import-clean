@@ -1,8 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-if [[ -d /etc/service/ssh ]]; then
-  if [[ $(sv status ssh) =~ ^run ]]; then
-    sv stop ssh
-  fi
-  rm  -rf /etc/service/ssh
-fi
+# hookit is installed as a bundled app, so we need bundler to load it for us
+$:.unshift  '/opt/gonano/hookit/vendor/bundle'
+require 'bundler/setup'
+
+# load hookit/setup to bootstrap hookit and import the dsl
+require 'hookit/setup'
+
+service 'ssh' do
+  action :disable
+  init :runit
+  not_if { !Dir.exist?('/etc/service/ssh') }
+end
+
+directory '/etc/service/ssh' do
+  action :delete
+  not_if { !Dir.exist?('/etc/service/ssh') }
+end

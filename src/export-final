@@ -1,3 +1,12 @@
-#!/bin/bash
-ip=$(echo $1 | jq '.member.local_ip')
-rsync --delete -e 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' -a /var/lib/faktory/. ${ip}:/var/lib/faktory/
+#!/usr/bin/env ruby
+
+# hookit is installed as a bundled app, so we need bundler to load it for us
+$:.unshift  '/opt/gonano/hookit/vendor/bundle'
+require 'bundler/setup'
+
+# load hookit/setup to bootstrap hookit and import the dsl
+require 'hookit/setup'
+
+execute "send diff data to new member" do
+  command "rsync --delete -e 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' -a /var/lib/faktory/. #{payload[:member][:local_ip]}:/var/lib/faktory/"
+end
