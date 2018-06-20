@@ -7,8 +7,6 @@ require 'bundler/setup'
 # load hookit/setup to bootstrap hookit and import the dsl
 require 'hookit/setup'
 
-config = converge( Hooky::Redis::CONFIG_DEFAULTS, payload[:config] || {} )
-
 if payload[:platform] != 'local'
   # Setup root keys for data migrations
   directory '/root/.ssh' do
