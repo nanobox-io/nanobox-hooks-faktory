@@ -61,8 +61,17 @@ execute "chown gonano /data/etc/env.d"
   end
 end
 
+faktory_password = 'password'
+if payload[:users]
+  payload[:users].each do |user|
+    if user[:username] == 'nanobox'
+      faktory_password = user[:password]
+    end
+  end
+end
+
 file "/data/etc/env.d/FAKTORY_PASSWORD" do
-  content payload[:users][0][:password]
+  content faktory_password
   owner 'gonano'
   group 'gonano'
   mode 0444
