@@ -7,9 +7,6 @@ require 'bundler/setup'
 # load hookit/setup to bootstrap hookit and import the dsl
 require 'hookit/setup'
 
-# Setup
-converged_config = converge( Hooky::Redis::CONFIG_DEFAULTS, payload[:config] || {} )
-
 local_md5 = execute "local md5" do
   command "cat /var/nanobox/hooks.md5"
   not_if { ! ::File.exists? "/var/nanobox/hooks.md5" }
