@@ -24,7 +24,7 @@ end
 
 template '/etc/service/faktory/run' do
   mode 0755
-  variables ({ exec: "faktory -b 0.0.0.0:7419 -e production"})
+  variables ({ exec: "faktory -b 0.0.0.0:7419 -w 0.0.0.0:7420 -e production"})
 end
 
 sleep 5
